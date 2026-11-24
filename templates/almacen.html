@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+{% block content %}
+{# KPIs Sanitarios #}
+<div class="pn-grid-4">
+  <div class="pn-kpi-card">
+    <div class="pn-kpi-label">Total Insumos</div>
+    <div class="pn-kpi-value num">{{ resumen_san.total }}</div>
+    <div class="pn-kpi-foot">Catálogo logístico general</div>
+  </div>
+  <div class="pn-kpi-card {{ 'kpi-alert' if resumen_san.vencidos > 0 else '' }}">
+    <div class="pn-kpi-label">Vencidos — Retiro Inmediato</div>
+    <div class="pn-kpi-value num">{{ resumen_san.vencidos }}</div>
+    <div class="pn-kpi-foot">Requiere reposición urgente</div>
+  </div>
+  <div class="pn-kpi-card">
+    <div class="pn-kpi-label">Próximos a Vencer (≤ 30 días)</div>
+    <div class="pn-kpi-value num" style="color:var(--pn-amber);">{{ resumen_san.por_vencer }}</div>
+    <div class="pn-kpi-foot">Prioridad de consumo</div>
+  </div>
+  <div class="pn-kpi-card">
+    <div class="pn-kpi-label">Vigentes / No Perecibles</div>
+    <div class="pn-kpi-value num" style="color:var(--pn-mint);">{{ resumen_san.vigentes }} / {{ resumen_san.no_perecibles }}</div>
+    <div class="pn-kpi-foot">En condiciones óptimas</div>
+  </div>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;">
+  <div class="pn-tabs">
+    <a href="/almacen?tab=insumos" class="pn-tab {{ 'active' if tab == 'insumos' else '' }}">🧪 Control Sanitario de Insumos</a>
+    <a href="/almacen?tab=sedes" class="pn-tab {{ 'active' if tab == 'sedes' else '' }}">🏢 Almacenes por Sede</a>
+    <a href="/almacen?tab=proveedores" class="pn-tab {{ 'active' if tab == 'proveedores' else '' }}">🚚 Proveedores ({{ proveedores|length }})</a>
+    <a href="/almacen?tab=compras" class="pn-tab {{ 'active' if tab == 'compras' else '' }}">🧾 Compras y Lotes</a>
+  </div>
+
+  {% if tab in ('insumos', 'proveedores') %}
+    <form method="get" action="/almacen" style="display:flex;gap:8px;">
+      <input type="hidden" name="tab" value="{{ tab }}" />
+      <input type="text" name="q" value="{{ q }}" placeholder="Buscar..." class="pn-input" style="width:210px;" />
+      <button type="submit" class="btn btn-outline btn-sm">Buscar</button>
+    </form>
+  {% endif %}
+</div>
+
+{% if tab == 'insumos' %}
+  <div class="pn-split-main">
+    <section class="pn-card">
+      <div class="pn-card-header">
+        <h2 class="pn-card-title">Inventario de Insumos y Semáforo de Caducidad</h2>
+      </div>
+      <div class="pn-table-wrap">
+        <table class="pn-table">
+          <thead>
+            <tr>
+              <th>Insumo</th>
+              <th>Unidad</th>
+              <th>Perecible</th>
+              <th>Vencimiento</th>
+              <th>Estado Sanitario</th>
+              <th style="text-align:right;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for i in insumos %}
+              <tr>
+                <td style="font-weight:700;">{{ i[1] }}</td>
+                <td>{{ i[3] }}</td>
+                <td>{{ i[4] }}</td>
+                <td class="mono" style="font-size:12px;">{{ i[5] }}</td>
+                <td>
+                  <span class="badge {{ 'badge-berry' if 'VENCIDO' in i[6] else ('badge-amber' if 'POR VENCER' in i[6] else ('badge-mint' if 'VIGENTE' in i[6] else 'badge-slate')) }}">
+                    {{ i[6] }}
+                  </span>
+                </td>
+                <td style="text-align:right;white-space:nowrap;">
+                  <details style="display:inline-block;text-align:left;">
+                    <summary class="btn btn-outline btn-sm" style="list-style:none;">Editar</summary>
+                    <form method="post" action="/almacen/insumos/{{ i[0] }}/editar" class="pn-card" style="margin-top:8px;padding:10px;display:flex;flex-direction:column;gap:8px;min-width:230px;">
+                      <input name="nombre_insumo" value="{{ i[1] }}" class="pn-input" required maxlength="45" />
+                      <select name="id_unidad_medida" class="pn-select">
+                        {% for u in unidades %}
+                          <option value="{{ u[0] }}" {{ 'selected' if u[0] == i[2] else '' }}>{{ u[1] }} ({{ u[2] }})</option>
+                        {% endfor %}
+                      </select>
+                      <input name="unidad_medida" value="{{ i[3] }}" class="pn-input" required maxlength="20" />
+                      <select name="es_perecible" class="pn-select">
+                        <option value="1" {{ 'selected' if i[4] == 'Sí' else '' }}>Perecible: Sí</option>
+                        <option value="0" {{ 'selected' if i[4] == 'No' else '' }}>Perecible: No</option>
+                      </select>
+                      <input name="f_vencimiento" type="date" value="{{ '' if i[5] == 'No aplica' else i[5] }}" class="pn-input" />
+                      <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
+                    </form>
+                  </details>
+                  {% if es_admin %}
+                    <form method="post" action="/almacen/insumos/{{ i[0] }}/eliminar" style="display:inline;" data-confirm="¿Retirar {{ i[1] }} del almacén?">
+                      <button type="submit" class="btn btn-danger btn-sm">Retirar</button>
+                    </form>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="pn-card">
+      <div class="pn-card-header">
+        <h2 class="pn-card-title">Registrar Nuevo Insumo</h2>
+      </div>
+      <form method="post" action="/almacen/insumos/crear" style="display:flex;flex-direction:column;gap:12px;">
+        <div class="pn-field">
+          <label>Nombre del Insumo</label>
+          <input name="nombre_insumo" type="text" class="pn-input" required maxlength="45" placeholder="Ej. Pulpa de Lúcuma (1kg)" />
+        </div>
+        <div class="pn-field">
+          <label>Unidad de Medida Oficial</label>
+          <select name="id_unidad_medida" class="pn-select" required>
+            {% for u in unidades %}
+              <option value="{{ u[0] }}">{{ u[1] }} ({{ u[2] }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="pn-field">
+          <label>Etiqueta de Unidad</label>
+          <input name="unidad_medida" type="text" class="pn-input" required maxlength="20" placeholder="Ej. Kilogramos, Litros, Unidades" />
+        </div>
+        <div class="pn-field">
+          <label>¿Es Perecible?</label>
+          <select name="es_perecible" class="pn-select">
+            <option value="1">Sí (requiere fecha de vencimiento)</option>
+            <option value="0">No (no perecible)</option>
+          </select>
+        </div>
+        <div class="pn-field">
+          <label>Fecha de Vencimiento</label>
+          <input name="f_vencimiento" type="date" class="pn-input" />
+        </div>
+        <button type="submit" class="btn btn-primary">Guardar en Almacén</button>
+      </form>
+    </section>
+  </div>
+
+{% elif tab == 'sedes' %}
+  <div class="pn-grid-3">
+    {% for a in almacenes %}
+      <section class="pn-card" style="display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <strong style="font-size:15px;color:var(--pn-navy);">📍 {{ a[1] }}</strong>
+          <span class="badge badge-mint">Almacén #{{ a[4] }}</span>
+        </div>
+        <div style="font-size:12px;color:var(--pn-muted);">{{ a[2] }} · Tel.: {{ a[3] }}</div>
+        <div class="num" style="font-size:28px;font-weight:800;color:var(--pn-glacier);">{{ a[5] }} <span style="font-size:13px;color:var(--pn-muted);font-weight:600;">unidades disponibles</span></div>
+        <form method="post" action="/almacen/sedes/{{ a[4] }}/actualizar" style="display:flex;gap:8px;padding-top:10px;border-top:1px solid var(--pn-border);">
+          <input type="number" name="cantidad_disponible" min="0" value="{{ a[5] }}" class="pn-input num" required />
+          <button type="submit" class="btn btn-primary btn-sm">Actualizar</button>
+        </form>
+      </section>
+    {% endfor %}
+  </div>
+
+{% elif tab == 'proveedores' %}
+  <div class="pn-split-main">
+    <section class="pn-card">
+      <div class="pn-card-header">
+        <h2 class="pn-card-title">Directorio de Proveedores</h2>
+      </div>
+      <div class="pn-table-wrap">
+        <table class="pn-table">
+          <thead>
+            <tr>
+              <th>Razón Social</th>
+              <th>RUC</th>
+              <th>Contacto</th>
+              <th style="text-align:right;">Pedidos</th>
+              <th style="text-align:right;">Histórico</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for pr in proveedores %}
+              <tr>
+                <td>
+                  <div style="font-weight:700;color:var(--pn-navy);">{{ pr[1] }}</div>
+                  <div style="font-size:11px;color:var(--pn-muted);">{{ pr[5] }}</div>
+                </td>
+                <td class="mono">{{ pr[2] }}</td>
+                <td style="font-size:12px;">{{ pr[3] }}<br /><span style="color:var(--pn-muted);">{{ pr[4] }}</span></td>
+                <td class="num" style="text-align:right;">{{ pr[6] }}</td>
+                <td class="num" style="text-align:right;font-weight:800;color:var(--pn-navy);">S/ {{ "%.2f"|format(pr[7]) }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="pn-card">
+      <div class="pn-card-header">
+        <h2 class="pn-card-title">Registrar Proveedor</h2>
+      </div>
+      <form method="post" action="/almacen/proveedores/guardar" style="display:flex;flex-direction:column;gap:11px;">
+        <input type="hidden" name="id_proveedor" value="0" />
+        <div class="pn-field"><label>Razón Social</label><input name="razon_social" class="pn-input" required maxlength="45" /></div>
+        <div class="pn-field"><label>RUC</label><input name="ruc" class="pn-input mono" required maxlength="20" /></div>
+        <div class="pn-field"><label>Teléfono</label><input name="telefono" class="pn-input mono" required maxlength="20" /></div>
+        <div class="pn-field"><label>Correo Electrónico</label><input name="email" type="email" class="pn-input" maxlength="100" /></div>
+        <div class="pn-field">
+          <label>Tipo de Proveedor</label>
+          <select name="persona_natural" class="pn-select">
+            <option value="0">Empresa (Persona Jurídica)</option>
+            <option value="1">Persona Natural</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Guardar Proveedor</button>
+      </form>
+    </section>
+  </div>
+
+{% elif tab == 'compras' %}
+  <div class="pn-split-main">
+    <section class="pn-card">
+      <div class="pn-card-header">
+        <h2 class="pn-card-title">Historial de Compras e Ingreso de Lotes</h2>
+        <form method="get" action="/almacen" style="display:flex;gap:8px;">
+          <input type="hidden" name="tab" value="compras" />
+          <select name="id_proveedor" class="pn-select" style="width:190px;">
+            <option value="0">Todos los proveedores</option>
+            {% for pr in proveedores %}
+              <option value="{{ pr[0] }}" {{ 'selected' if filtro_proveedor == pr[0] else '' }}>{{ pr[1] }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="btn btn-outline btn-sm">Filtrar</button>
+        </form>
+      </div>
+      <div class="pn-table-wrap">
+        <table class="pn-table">
+          <thead>
+            <tr>
+              <th>Compra</th>
+              <th>Fecha</th>
+              <th>Proveedor</th>
+              <th>Insumo</th>
+              <th style="text-align:right;">Cant. × P.U.</th>
+              <th style="text-align:right;">Total Exacto</th>
+              <th>Lote</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in compras %}
+              <tr>
+                <td class="mono" style="font-weight:700;">#{{ c[0] }}</td>
+                <td class="mono" style="font-size:12px;">{{ c[2] }}</td>
+                <td>{{ c[3] }}</td>
+                <td style="font-weight:600;">{{ c[4] or '—' }}</td>
+                <td class="num" style="text-align:right;font-size:12px;">{{ c[6] }} × S/ {{ "%.2f"|format(c[7]) }}</td>
+                <td class="num" style="text-align:right;font-weight:800;color:var(--pn-navy);">S/ {{ "%.2f"|format(c[8]) }}</td>
+                <td>
+                  <span class="badge {{ 'badge-berry' if 'VENCIDO' in c[10] else ('badge-amber' if 'POR VENCER' in c[10] else ('badge-mint' if 'VIGENTE' in c[10] else 'badge-slate')) }}">
+                    {{ c[9] }}
+                  </span>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="pn-card">
+      <div class="pn-card-header">
+        <h2 class="pn-card-title">Registrar Ingreso de Compra</h2>
+      </div>
+      <form method="post" action="/almacen/compras/registrar" style="display:flex;flex-direction:column;gap:11px;">
+        <div class="pn-field">
+          <label>Proveedor</label>
+          <select name="id_proveedor" class="pn-select" required>
+            {% for pr in proveedores %}
+              <option value="{{ pr[0] }}">{{ pr[1] }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="pn-field">
+          <label>Insumo Recibido</label>
+          <select name="id_insumo" class="pn-select" required>
+            {% for ins in insumos %}
+              <option value="{{ ins[0] }}">{{ ins[1] }} ({{ ins[3] }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="pn-grid-2" style="gap:10px;">
+          <div class="pn-field"><label>Cantidad</label><input name="cantidad" type="number" min="1" class="pn-input num" required /></div>
+          <div class="pn-field"><label>Precio Unit. (S/)</label><input name="precio_unitario" type="number" step="0.01" min="0.10" class="pn-input num" required /></div>
+        </div>
+        <div class="pn-field">
+          <label>Vencimiento del Lote (si es perecible)</label>
+          <input name="fecha_vencimiento" type="date" class="pn-input" />
+        </div>
+        <button type="submit" class="btn btn-success">Registrar Compra y Lote</button>
+      </form>
+    </section>
+  </div>
+{% endif %}
+{% endblock %}

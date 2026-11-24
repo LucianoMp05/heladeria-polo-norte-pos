@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+{% block content %}
+<div id="pos-workspace" data-default-prod="{{ primer_prod_id }}" style="display:flex;flex-direction:column;gap:18px;">
+
+  {# Barra de Resumen de Sede + Atajos #}
+  <div class="pn-card" style="padding:12px 16px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;">
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;">
+      <span class="badge badge-mint" style="font-size:12px;padding:6px 12px;">
+        💰 Recaudado {{ arqueo_resumen.nombre_sucursal }}: <strong class="num">S/ {{ "%.2f"|format(arqueo_resumen.total_recaudado) }}</strong> ({{ arqueo_resumen.total_ventas }} ventas)
+      </span>
+      <span class="badge badge-sky" style="font-size:12px;padding:6px 12px;">
+        🧾 Próximo comprobante: <strong id="pos-correlativo-badge" class="mono">{{ correlativo }}</strong>
+      </span>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-size:12px;color:var(--pn-muted);">
+      <span>Atajos: <span class="pos-kbd">1–7</span> Producto · <span class="pos-kbd">F9</span> Cobrar</span>
+      <a href="/pos/arqueo" class="btn btn-outline btn-sm">📊 Ver Arqueo Completo</a>
+    </div>
+  </div>
+
+  <div class="pos-layout">
+    {# IZQUIERDA: CUADRÍCULA TÁCTIL DE PRODUCTOS + TOPPINGS #}
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <section class="pn-card">
+        <div class="pn-card-header">
+          <h2 class="pn-card-title">1. Selecciona el Producto</h2>
+          <span class="badge badge-slate">Precios oficiales fijos</span>
+        </div>
+
+        <div class="pos-products-grid">
+          {% for prod in productos %}
+            {% set pid = prod[0] %}
+            {% set pnom = prod[3] %}
+            {% set pprecio = "%.2f"|format(prod[2]) %}
+            <button
+              type="button"
+              class="pos-prod-card {{ 'selected' if pid == primer_prod_id else '' }}"
+              data-prod-id="{{ pid }}"
+              data-prod-precio="{{ pprecio }}"
+              onclick="seleccionarProductoPOS(this)"
+            >
+              <div class="pos-prod-top">
+                <span class="pos-prod-icon">{{ iconos_producto.get(pid, "🍦") }}</span>
+                <span class="pos-kbd">{{ loop.index }}</span>
+              </div>
+              <div class="pos-prod-name">{{ pnom }}</div>
+              <div class="pos-prod-price num">S/ {{ pprecio }}</div>
+            </button>
+          {% endfor %}
+        </div>
+      </section>
+
+      {# PASO 2: TOPPING + PRECIO OFICIAL DE SOLO LECTURA + CANTIDAD #}
+      <section class="pn-card">
+        <div class="pn-card-header">
+          <h2 class="pn-card-title">2. Topping Adicional y Cantidad</h2>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <label for="pos-precio-readonly" style="font-size:12px;font-weight:700;color:var(--pn-muted);">Precio Base (S/):</label>
+            <input
+              id="pos-precio-readonly"
+              type="text"
+              class="pn-input num"
+              value="{{ primer_prod_precio }}"
+              readonly
+              style="width:92px;text-align:right;padding:6px 10px;"
+              title="Precio oficial protegido de solo lectura"
+            />
+          </div>
+        </div>
+
+        <input type="hidden" id="pos-id-producto" value="{{ primer_prod_id }}" />
+        <input type="hidden" id="pos-id-topping" value="0" />
+
+        <div id="pos-toppings-container">
+          {% with toppings=toppings_iniciales %}
+            {% include "partials/pos_toppings.html" %}
+          {% endwith %}
+        </div>
+
+        <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;margin-top:16px;padding-top:14px;border-top:1px solid var(--pn-border);">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:12px;font-weight:700;color:var(--pn-navy);">Cantidad:</span>
+            <button type="button" class="btn btn-outline btn-sm" onclick="ajustarCantidadPOS(-1)" style="width:34px;">−</button>
+            <input id="pos-cantidad" type="number" min="1" value="1" class="pn-input num" style="width:62px;text-align:center;padding:6px;" />
+            <button type="button" class="btn btn-outline btn-sm" onclick="ajustarCantidadPOS(1)" style="width:34px;">+</button>
+          </div>
+
+          <button type="button" class="btn btn-primary btn-lg" onclick="agregarItemPOS()">
+            + Agregar al Pedido
+          </button>
+        </div>
+      </section>
+    </div>
+
+    {# DERECHA: PEDIDO ACTUAL, MODALIDAD, PAGO Y COBRO #}
+    <section class="pn-card" style="display:flex;flex-direction:column;gap:14px;">
+      <div class="pn-card-header" style="margin-bottom:0;">
+        <h2 class="pn-card-title">3. Pedido Actual</h2>
+        <button type="button" class="btn btn-outline btn-sm" onclick="vaciarCarritoPOS()">Vaciar</button>
+      </div>
+
+      <form id="pos-checkout-form" method="post" action="/pos/ventas" style="display:flex;flex-direction:column;gap:13px;">
+        {# Tipo de Comprobante y Modalidad #}
+        <div class="pn-grid-2" style="gap:10px;">
+          <div>
+            <input type="hidden" id="pos-tipo-comprobante" name="tipo_comprobante" value="Boleta" />
+            <div style="font-size:11px;font-weight:700;color:var(--pn-muted);margin-bottom:4px;">Comprobante</div>
+            <div class="pn-grid-half">
+              <button type="button" data-doc-btn="Boleta" class="btn btn-navy btn-sm" onclick="cambiarTipoComprobantePOS('Boleta')">Boleta</button>
+              <button type="button" data-doc-btn="Factura" class="btn btn-outline btn-sm" onclick="cambiarTipoComprobantePOS('Factura')">Factura</button>
+            </div>
+          </div>
+
+          <div>
+            <input type="hidden" id="pos-canal-atencion" name="canal_atencion" value="Sede" />
+            <div style="font-size:11px;font-weight:700;color:var(--pn-muted);margin-bottom:4px;">Modalidad</div>
+            <div class="pn-grid-half">
+              <button type="button" data-canal-btn="Sede" class="btn btn-navy btn-sm" onclick="cambiarCanalPOS('Sede')">En Sede</button>
+              <button type="button" data-canal-btn="Delivery" class="btn btn-outline btn-sm" onclick="cambiarCanalPOS('Delivery')">Delivery</button>
+            </div>
+          </div>
+        </div>
+
+        {# Cajero (filtrado por sede) y Cliente + Alta rápida #}
+        <div class="pn-field">
+          <label for="pos-cajero">Atendido por ({{ sesion.nombre_sucursal }})</label>
+          <select id="pos-cajero" name="id_empleado" class="pn-select" required>
+            {% for emp in empleados %}
+              <option value="{{ emp[0] }}">{{ emp[1] }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="pn-field">
+          <label for="pos-cliente">Cliente</label>
+          <div style="display:flex;gap:8px;">
+            <select id="pos-cliente" name="id_cliente" class="pn-select" required>
+              {% for cli in clientes %}
+                <option value="{{ cli[0] }}">{{ cli[1] }}</option>
+              {% endfor %}
+            </select>
+            <button type="button" class="btn btn-outline btn-sm" onclick="abrirModal('modal-cliente-rapido')">+ Nuevo</button>
+          </div>
+        </div>
+
+        {# Contenedor dinámico del carrito #}
+        <div id="pos-cart-container">
+          {% include "partials/pos_carrito.html" %}
+        </div>
+
+        {# 4 Botones táctiles de Medio de Pago #}
+        <div class="pn-field">
+          <label>Medio de Pago</label>
+          <input type="hidden" id="pos-id-metodo-pago" name="id_metodo_pago" value="{{ metodos[0][0] if metodos else 1 }}" />
+          <div class="pos-pay-grid">
+            {% for mp in metodos %}
+              {% set nom_mp = mp[1].split(' - ', 1)[1] if ' - ' in mp[1] else mp[1] %}
+              <button
+                type="button"
+                class="pos-pay-btn {{ 'selected' if loop.first else '' }}"
+                data-metodo-id="{{ mp[0] }}"
+                data-metodo-nombre="{{ nom_mp }}"
+                onclick="seleccionarMetodoPagoPOS(this)"
+              >
+                {% if 'Efectivo' in nom_mp %}💵{% elif 'Yape' in nom_mp %}📱{% elif 'Plin' in nom_mp %}📲{% else %}💳{% endif %}
+                {{ nom_mp }}
+              </button>
+            {% endfor %}
+          </div>
+        </div>
+
+        {# Recordatorio visual Yape/Plin #}
+        <div id="pos-qr-notice" class="pn-flash pn-flash-warn" style="display:none;padding:9px 12px;font-size:12px;">
+          <span>✔ Verifica el abono recibido en el celular oficial de caja antes de emitir el comprobante.</span>
+        </div>
+
+        {# Asistente rápido de efectivo #}
+        <div id="pos-efectivo-box" style="background:var(--pn-surface-alt);border:1px solid var(--pn-border);border-radius:10px;padding:10px 12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+            <label for="pos-monto-recibido" style="font-size:11px;font-weight:700;color:var(--pn-muted);">Efectivo entregado (S/):</label>
+            <input id="pos-monto-recibido" type="number" step="0.50" min="0" placeholder="Exacto" class="pn-input num" style="width:95px;padding:5px 8px;text-align:right;" />
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">
+            <button type="button" class="btn btn-outline btn-sm" onclick="aplicarEfectivoPOS('exacto')">Exacto</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="aplicarEfectivoPOS(10)">S/ 10</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="aplicarEfectivoPOS(20)">S/ 20</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="aplicarEfectivoPOS(50)">S/ 50</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="aplicarEfectivoPOS(100)">S/ 100</button>
+          </div>
+        </div>
+
+        <button id="pos-btn-cobrar" type="submit" class="btn btn-success btn-lg btn-block">
+          ✓ Emitir Comprobante y Cobrar — S/ {{ "%.2f"|format(resumen_carrito.total_cobrar) }} (F9)
+        </button>
+      </form>
+    </section>
+  </div>
+
+  {# HISTORIAL RECIENTE DE VENTAS DE LA SEDE #}
+  <section class="pn-card">
+    <div class="pn-card-header">
+      <div>
+        <h2 class="pn-card-title">Comprobantes Emitidos Recientes</h2>
+        <div style="font-size:12px;color:var(--pn-muted);">Haz clic en "Ticket" para ver o imprimir el comprobante térmico (80 mm)</div>
+      </div>
+
+      <form method="get" action="/pos" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+        <input type="text" name="texto" value="{{ filtro_texto }}" placeholder="Buscar boleta, cliente o cajero..." class="pn-input" style="width:210px;padding:7px 10px;" />
+        <select name="canal" class="pn-select" style="width:130px;padding:7px 10px;">
+          <option value="Todos" {{ 'selected' if filtro_canal == 'Todos' else '' }}>Todo canal</option>
+          <option value="Sede" {{ 'selected' if filtro_canal == 'Sede' else '' }}>En Sede</option>
+          <option value="Delivery" {{ 'selected' if filtro_canal == 'Delivery' else '' }}>Delivery</option>
+        </select>
+        <button type="submit" class="btn btn-outline btn-sm">Filtrar</button>
+        {% if es_admin %}
+          <a href="/pos/ventas/exportar.csv" class="btn btn-outline btn-sm">⬇️ CSV</a>
+        {% endif %}
+      </form>
+    </div>
+
+    <div class="pn-table-wrap">
+      <table class="pn-table">
+        <thead>
+          <tr>
+            <th>Comprobante</th>
+            <th>Fecha</th>
+            <th>Canal</th>
+            <th>Cliente</th>
+            <th>Cajero · Sede</th>
+            <th>Medio de Pago</th>
+            <th style="text-align:right;">Total</th>
+            <th style="text-align:right;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for v in ventas %}
+            <tr>
+              <td class="mono" style="font-weight:700;">{{ v[1] }}</td>
+              <td class="mono" style="font-size:12px;">{{ v[4] }}</td>
+              <td><span class="badge {{ 'badge-sky' if v[3] == 'Sede' else 'badge-amber' }}">{{ v[3] }}</span></td>
+              <td>{{ v[5] }}</td>
+              <td>{{ v[6] }} <span style="color:var(--pn-muted);font-size:12px;">({{ v[7] }})</span></td>
+              <td><span class="badge badge-slate">{{ v[8] }}</span></td>
+              <td class="num" style="text-align:right;font-weight:800;color:var(--pn-navy);">S/ {{ "%.2f"|format(v[9]) }}</td>
+              <td style="text-align:right;white-space:nowrap;">
+                <a href="/pos/ventas/{{ v[0] }}/ticket" target="_blank" class="btn btn-outline btn-sm">🧾 Ticket</a>
+                {% if es_admin %}
+                  <form method="post" action="/pos/ventas/{{ v[0] }}/anular" style="display:inline;" data-confirm="¿Deseas anular el comprobante {{ v[1] }}? Esta acción quedará registrada en el historial.">
+                    <button type="submit" class="btn btn-danger btn-sm">Anular</button>
+                  </form>
+                {% endif %}
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="8" style="text-align:center;color:var(--pn-muted);padding:20px;">No se encontraron comprobantes con los filtros seleccionados.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+{# MODAL: ALTA RÁPIDA DE CLIENTE SIN SALIR DE CAJA #}
+<div id="modal-cliente-rapido" class="pn-modal-backdrop">
+  <div class="pn-modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <h3 style="margin:0;color:var(--pn-navy);font-size:16px;">Registro Rápido de Cliente</h3>
+      <button type="button" class="btn btn-outline btn-sm" onclick="cerrarModal('modal-cliente-rapido')">✕</button>
+    </div>
+    <form method="post" action="/pos/clientes/rapido" style="display:flex;flex-direction:column;gap:12px;">
+      <div class="pn-field">
+        <label>Nombres</label>
+        <input name="nombres" type="text" class="pn-input" required maxlength="45" />
+      </div>
+      <div class="pn-grid-2" style="gap:10px;">
+        <div class="pn-field">
+          <label>Apellido Paterno</label>
+          <input name="ap_paterno" type="text" class="pn-input" required maxlength="45" />
+        </div>
+        <div class="pn-field">
+          <label>Apellido Materno</label>
+          <input name="ap_materno" type="text" class="pn-input" maxlength="45" />
+        </div>
+      </div>
+      <div class="pn-field">
+        <label>Celular (9 dígitos)</label>
+        <input name="celular" type="text" class="pn-input mono" maxlength="9" placeholder="987654321" />
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:6px;">
+        <button type="button" class="btn btn-outline" onclick="cerrarModal('modal-cliente-rapido')">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Guardar Cliente</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

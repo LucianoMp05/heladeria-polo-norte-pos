@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: heladeria-polo-norte
+    runtime: python
+    plan: free
+    region: virginia
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.8"
+      - key: APP_ENV
+        value: production
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: DB_PORT
+        value: "3306"
+      - key: DB_NAME
+        value: proyect_db
+      - key: DB_USER
+        value: adminpolo
+      - key: DB_SSL
+        value: "1"
+      - key: DB_HOST
+        sync: false
+      - key: DB_PASSWORD
+        sync: false

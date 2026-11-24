@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="pn-card" style="padding:14px 18px;">
+  <form method="get" action="/historial" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;justify-content:space-between;">
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
+      <div class="pn-field">
+        <label>Módulo Comercial</label>
+        <select name="modulo" class="pn-select" style="width:205px;">
+          {% set modulos = ['Todos', 'Punto de Venta', 'Seguridad y Accesos', 'Catálogo de Productos', 'Toppings y Adicionales', 'Almacén e Insumos', 'Compras y Abastecimiento', 'Personal y Sedes'] %}
+          {% for m in modulos %}
+            <option value="{{ m }}" {{ 'selected' if filtro_modulo == m else '' }}>{{ m }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="pn-field">
+        <label>Tipo de Evento</label>
+        <select name="accion" class="pn-select" style="width:190px;">
+          <option value="Todos" {{ 'selected' if filtro_accion == 'Todos' else '' }}>Todos los eventos</option>
+          <option value="ACCESO" {{ 'selected' if filtro_accion in ('ACCESO', 'LOGIN') else '' }}>Inicio de Sesión</option>
+          <option value="ALTA" {{ 'selected' if filtro_accion in ('ALTA', 'INSERT') else '' }}>Registro</option>
+          <option value="CAMBIO" {{ 'selected' if filtro_accion in ('CAMBIO', 'UPDATE') else '' }}>Actualización</option>
+          <option value="BAJA" {{ 'selected' if filtro_accion in ('BAJA', 'DELETE') else '' }}>Eliminación / Anulación</option>
+          <option value="SEGURIDAD" {{ 'selected' if filtro_accion in ('SEGURIDAD', 'BLOQUEO') else '' }}>Bloqueo Preventivo</option>
+        </select>
+      </div>
+
+      <div class="pn-field">
+        <label>Desde</label>
+        <input type="date" name="fecha_desde" value="{{ fecha_desde }}" class="pn-input" />
+      </div>
+      <div class="pn-field">
+        <label>Hasta</label>
+        <input type="date" name="fecha_hasta" value="{{ fecha_hasta }}" class="pn-input" />
+      </div>
+      <button type="submit" class="btn btn-primary">Filtrar</button>
+      <a href="/historial" class="btn btn-outline">Limpiar</a>
+    </div>
+
+    <a href="/historial/exportar.csv?accion={{ filtro_accion }}&modulo={{ filtro_modulo }}&fecha_desde={{ fecha_desde }}&fecha_hasta={{ fecha_hasta }}" class="btn btn-navy btn-sm">⬇️ Exportar CSV</a>
+  </form>
+</section>
+
+<section class="pn-card">
+  <div class="pn-card-header">
+    <h2 class="pn-card-title">Registro Cronológico de Operaciones ({{ eventos|length }} eventos)</h2>
+    <span class="badge badge-mint">Auditoría automática activa</span>
+  </div>
+  <div class="pn-table-wrap">
+    <table class="pn-table">
+      <thead>
+        <tr>
+          <th>Fecha y Hora</th>
+          <th>Usuario</th>
+          <th>Área</th>
+          <th>Evento</th>
+          <th>Módulo</th>
+          <th>Detalle de la Operación</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ev in eventos %}
+          <tr>
+            <td class="mono" style="font-size:12px;white-space:nowrap;">{{ ev[1] }}</td>
+            <td class="mono" style="font-weight:700;">{{ ev[2] }}</td>
+            <td>{{ ev[3] }}</td>
+            <td>
+              <span class="badge {{ 'badge-berry' if ev[4] in ('SEGURIDAD', 'BAJA', 'BLOQUEO', 'DELETE') else ('badge-mint' if ev[4] in ('ALTA', 'INSERT') else ('badge-amber' if ev[4] in ('CAMBIO', 'UPDATE') else 'badge-sky')) }}">
+                {{ ev[5] }}
+              </span>
+            </td>
+            <td style="font-weight:600;color:var(--pn-navy);">{{ ev[6] }}</td>
+            <td style="font-size:12px;color:var(--pn-muted);">{{ ev[7] }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6" style="text-align:center;color:var(--pn-muted);padding:20px;">No hay eventos registrados con esos filtros.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

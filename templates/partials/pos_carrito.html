@@ -1,0 +1,46 @@
+<div style="display:flex;flex-direction:column;gap:10px;">
+  {% if lineas_carrito %}
+    <div style="display:flex;flex-direction:column;gap:8px;max-height:230px;overflow-y:auto;padding-right:2px;">
+      {% for it in lineas_carrito %}
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:10px;background:var(--pn-surface-alt);border:1px solid var(--pn-border);">
+          <div>
+            <div style="font-weight:700;font-size:13px;color:var(--pn-navy);">{{ it[3] }}× {{ it[2] }}</div>
+            <div style="font-size:11px;color:var(--pn-muted);">
+              Base S/ {{ "%.2f"|format(it[4]) }}
+              {% if it[5] > 0 %} · + {{ it[6] }} (S/ {{ "%.2f"|format(it[7]) }}){% else %} · Sin topping{% endif %}
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="num" style="font-weight:800;color:var(--pn-navy);">S/ {{ "%.2f"|format(it[9]) }}</span>
+            <button type="button" class="btn btn-outline btn-sm" style="padding:3px 8px;color:var(--pn-berry);" onclick="quitarItemPOS({{ loop.index0 }})">✕</button>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div style="text-align:center;padding:20px;border:1.5px dashed var(--pn-border);border-radius:12px;color:var(--pn-muted);font-size:12px;">
+      Selecciona un producto a la izquierda y presiona <strong>"+ Agregar al Pedido"</strong>.
+    </div>
+  {% endif %}
+
+  <div class="pos-total-box">
+    <div class="pos-total-row">
+      <span style="font-size:12px;color:#BAE6FD;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">
+        Total a Cobrar ({{ resumen_carrito.total_unidades }} u.)
+      </span>
+      <span id="pos-cart-total-val" class="pos-total-amount num" data-total="{{ '%.2f'|format(resumen_carrito.total_cobrar) }}">
+        S/ {{ "%.2f"|format(resumen_carrito.total_cobrar) }}
+      </span>
+    </div>
+    {% if resumen_carrito.monto_recibido > 0 %}
+      <div style="display:flex;justify-content:space-between;font-size:12px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.18);">
+        <span style="color:#CBD5E1;">Entregado: S/ {{ "%.2f"|format(resumen_carrito.monto_recibido) }}</span>
+        {% if resumen_carrito.faltante > 0 %}
+          <span style="color:#FDA4AF;font-weight:800;">Falta: S/ {{ "%.2f"|format(resumen_carrito.faltante) }}</span>
+        {% else %}
+          <span style="color:#6EE7B7;font-weight:800;">Vuelto: S/ {{ "%.2f"|format(resumen_carrito.vuelto) }}</span>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+</div>

@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+{% block content %}
+{# Filtros de Gerencia #}
+<section class="pn-card" style="padding:14px 18px;">
+  <form method="get" action="/dashboard" style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;justify-content:space-between;">
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
+      <div class="pn-field">
+        <label>Sucursal</label>
+        <select name="id_sucursal" class="pn-select" style="width:190px;">
+          <option value="0" {{ 'selected' if filtro_sede == 0 else '' }}>Todas las Sedes (Red)</option>
+          {% for s in sedes %}
+            <option value="{{ s[0] }}" {{ 'selected' if filtro_sede == s[0] else '' }}>{{ s[1] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="pn-field">
+        <label>Desde</label>
+        <input type="date" name="fecha_desde" value="{{ fecha_desde }}" class="pn-input" />
+      </div>
+      <div class="pn-field">
+        <label>Hasta</label>
+        <input type="date" name="fecha_hasta" value="{{ fecha_hasta }}" class="pn-input" />
+      </div>
+      <button type="submit" class="btn btn-primary">Aplicar Filtros</button>
+      {% if filtro_sede or fecha_desde or fecha_hasta %}
+        <a href="/dashboard" class="btn btn-outline">Limpiar</a>
+      {% endif %}
+    </div>
+    <div style="display:flex;gap:8px;">
+      <a href="/pos/ventas/exportar.csv?id_sucursal={{ filtro_sede }}" class="btn btn-outline btn-sm">⬇️ Exportar Ventas CSV</a>
+      <a href="/pos/arqueo" class="btn btn-navy btn-sm">💰 Arqueo Detallado</a>
+    </div>
+  </form>
+</section>
+
+{# Fila 1: Tarjetas KPI Principales #}
+<div class="pn-grid-4">
+  <div class="pn-kpi-card kpi-mint">
+    <div class="pn-kpi-label">Ingresos Totales</div>
+    <div class="pn-kpi-value num">S/ {{ "%.2f"|format(datos.kpis.total_ingresos) }}</div>
+    <div class="pn-kpi-foot">{{ datos.kpis.cantidad_ventas }} comprobantes · {{ datos.kpis.unidades_vendidas }} unidades</div>
+  </div>
+  <div class="pn-kpi-card">
+    <div class="pn-kpi-label">Ticket Promedio</div>
+    <div class="pn-kpi-value num">S/ {{ "%.2f"|format(datos.kpis.ticket_promedio) }}</div>
+    <div class="pn-kpi-foot">{{ datos.kpis.clientes_unicos }} clientes únicos atendidos</div>
+  </div>
+  <div class="pn-kpi-card {{ 'kpi-alert' if datos.kpis.insumos_vencidos > 0 else '' }}">
+    <div class="pn-kpi-label">Alertas Sanitarias en Almacén</div>
+    <div class="pn-kpi-value num">{{ datos.kpis.insumos_vencidos }} vencidos</div>
+    <div class="pn-kpi-foot">{{ datos.kpis.insumos_por_vencer }} próximo(s) a vencer · <a href="/almacen" style="text-decoration:underline;font-weight:700;">Revisar almacén</a></div>
+  </div>
+  <div class="pn-kpi-card {{ 'kpi-alert' if datos.kpis.cuentas_bloqueadas > 0 else '' }}">
+    <div class="pn-kpi-label">Seguridad y Accesos</div>
+    <div class="pn-kpi-value num">{{ datos.kpis.cuentas_bloqueadas }} bloqueada(s)</div>
+    <div class="pn-kpi-foot">Protección de 3 intentos en cuentas administrativas</div>
+  </div>
+</div>
+
+{# Fila 2: Alertas Operativas Accionables #}
+<div class="pn-grid-2">
+  <section class="pn-card">
+    <div class="pn-card-header">
+      <h2 class="pn-card-title">⚠️ Alertas Sanitarias de Insumos y Recetas</h2>
+      <a href="/almacen?tab=insumos" class="btn btn-outline btn-sm">Ir a Almacén</a>
+    </div>
+
+    {% if datos.alertas_insumos %}
+      <div style="display:flex;flex-direction:column;gap:8px;max-height:240px;overflow-y:auto;">
+        {% for a in datos.alertas_insumos %}
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border-radius:10px;background:{{ 'var(--pn-berry-bg)' if 'VENCIDO' in a[5] else 'var(--pn-amber-bg)' }};border:1px solid {{ 'var(--pn-berry-border)' if 'VENCIDO' in a[5] else 'var(--pn-amber-border)' }};">
+            <div>
+              <div style="font-weight:700;font-size:13px;color:var(--pn-navy);">{{ a[1] }} <span style="font-weight:400;color:var(--pn-muted);">({{ a[2] }})</span></div>
+              <div style="font-size:11px;color:var(--pn-muted);">Vencimiento: <span class="mono">{{ a[3] }}</span></div>
+            </div>
+            <span class="badge {{ 'badge-berry' if 'VENCIDO' in a[5] else 'badge-amber' }}">{{ a[5] }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="pn-flash pn-flash-ok">Todos los insumos perecibles están vigentes.</div>
+    {% endif %}
+
+    {% if datos.alertas_recetas %}
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--pn-border);">
+        <div style="font-size:12px;font-weight:800;color:var(--pn-berry);margin-bottom:8px;">
+          🍨 Productos con receta afectada por insumos vencidos ({{ datos.alertas_recetas|length }}):
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          {% for r in datos.alertas_recetas %}
+            <div style="font-size:12px;display:flex;justify-content:space-between;gap:8px;padding:6px 10px;border-radius:8px;background:var(--pn-surface-alt);">
+              <strong>{{ r[1] }}</strong>
+              <span style="color:var(--pn-berry);">{{ r[2] }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="pn-card">
+    <div class="pn-card-header">
+      <h2 class="pn-card-title">🔐 Accesos Bloqueados y Seguridad</h2>
+      <a href="/personal#accesos" class="btn btn-outline btn-sm">Gestionar Cuentas</a>
+    </div>
+
+    {% if datos.alertas_bloqueos %}
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        {% for b in datos.alertas_bloqueos %}
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px;border-radius:12px;background:{{ 'var(--pn-berry-bg)' if b[5] == 'Bloqueado' else 'var(--pn-amber-bg)' }};border:1px solid {{ 'var(--pn-berry-border)' if b[5] == 'Bloqueado' else 'var(--pn-amber-border)' }};">
+            <div>
+              <div style="font-weight:800;font-size:13px;color:var(--pn-navy);">{{ b[2] }} (<span class="mono">{{ b[1] }}</span>)</div>
+              <div style="font-size:12px;color:var(--pn-muted);">{{ b[3] }} · Intentos fallidos: <strong>{{ b[4] }} de 3</strong></div>
+            </div>
+            <form method="post" action="/personal/reactivar">
+              <input type="hidden" name="usuario" value="{{ b[1] }}" />
+              <input type="hidden" name="origen" value="/dashboard" />
+              <button type="submit" class="btn btn-success btn-sm">Desbloquear</button>
+            </form>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="pn-flash pn-flash-ok">
+        <span>✅ Todas las cuentas administrativas están activas sin bloqueos ni intentos fallidos.</span>
+      </div>
+    {% endif %}
+
+    {# Modalidad de Atención (Sede vs Delivery) #}
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--pn-border);">
+      <div style="font-size:13px;font-weight:700;color:var(--pn-navy);margin-bottom:10px;">Ventas por Modalidad (En Sede vs. Delivery)</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        {% for c in datos.ventas_canal %}
+          <div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-bottom:4px;">
+              <span>{{ '🏪 En Sede' if c[0] == 'Sede' else '🛵 Delivery' }} ({{ c[1] }} ventas)</span>
+              <span class="num">S/ {{ "%.2f"|format(c[2]) }} · {{ "%.1f"|format(c[4]) }}%</span>
+            </div>
+            <div class="pn-bar-track">
+              <div class="pn-bar-fill {{ 'pn-bar-mint' if c[0] == 'Sede' else 'pn-bar-amber' }}" style="width:{{ c[4] }}%;"></div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+</div>
+
+{# Fila 3: Ventas por Sede y por Medio de Pago #}
+<div class="pn-grid-2">
+  <section class="pn-card">
+    <div class="pn-card-header">
+      <h2 class="pn-card-title">📍 Ventas por Sede</h2>
+      <span class="badge badge-sky">Red de 3 Sucursales</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      {% for s in datos.ventas_sede %}
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:13px;margin-bottom:5px;">
+            <div>
+              <strong style="color:var(--pn-navy);">{{ s[1] }}</strong>
+              <span style="color:var(--pn-muted);font-size:12px;"> · {{ s[2] }} ventas · Prom. S/ {{ "%.2f"|format(s[4]) }}</span>
+            </div>
+            <span class="num" style="font-weight:800;color:var(--pn-glacier);">S/ {{ "%.2f"|format(s[3]) }} ({{ "%.1f"|format(s[5]) }}%)</span>
+          </div>
+          <div class="pn-bar-track"><div class="pn-bar-fill" style="width:{{ s[5] }}%;"></div></div>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="pn-card">
+    <div class="pn-card-header">
+      <h2 class="pn-card-title">💳 Ventas por Medio de Pago</h2>
+      <span class="badge badge-slate">4 medios registrados</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      {% set colores = ['pn-bar-mint', 'pn-bar-amber', '', 'pn-bar-purple'] %}
+      {% for mp in datos.ventas_metodo %}
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:13px;margin-bottom:5px;">
+            <div>
+              <strong style="color:var(--pn-navy);">{{ mp[1] }}</strong>
+              <span style="color:var(--pn-muted);font-size:12px;"> · {{ mp[2] }} comprobantes</span>
+            </div>
+            <span class="num" style="font-weight:800;">S/ {{ "%.2f"|format(mp[3]) }} ({{ "%.1f"|format(mp[4]) }}%)</span>
+          </div>
+          <div class="pn-bar-track"><div class="pn-bar-fill {{ colores[loop.index0 % 4] }}" style="width:{{ mp[4] }}%;"></div></div>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+
+{# Fila 4: Ranking de Productos y Toppings #}
+<div class="pn-grid-2">
+  <section class="pn-card">
+    <div class="pn-card-header">
+      <h2 class="pn-card-title">🍨 Ventas por Producto</h2>
+      <a href="/catalogo?tab=productos" class="btn btn-outline btn-sm">Catálogo</a>
+    </div>
+    <div class="pn-table-wrap">
+      <table class="pn-table">
+        <thead>
+          <tr>
+            <th>Producto</th>
+            <th style="text-align:right;">Unid.</th>
+            <th style="text-align:right;">Ingresos</th>
+            <th style="text-align:right;">%</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in datos.top_productos %}
+            <tr>
+              <td style="font-weight:700;">{{ p[1] }}</td>
+              <td class="num" style="text-align:right;">{{ p[3] }}</td>
+              <td class="num" style="text-align:right;font-weight:800;color:var(--pn-navy);">S/ {{ "%.2f"|format(p[5]) }}</td>
+              <td class="num" style="text-align:right;"><span class="badge badge-sky">{{ "%.1f"|format(p[6]) }}%</span></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="pn-card">
+    <div class="pn-card-header">
+      <h2 class="pn-card-title">🍫 Toppings Más Solicitados</h2>
+      <a href="/catalogo?tab=toppings" class="btn btn-outline btn-sm">Gestionar Toppings</a>
+    </div>
+    <div class="pn-table-wrap">
+      <table class="pn-table">
+        <thead>
+          <tr>
+            <th>Topping</th>
+            <th style="text-align:right;">Precio</th>
+            <th style="text-align:right;">Unidades</th>
+            <th style="text-align:right;">Adicional</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in datos.top_toppings %}
+            <tr>
+              <td style="font-weight:700;">{{ t[1] }}</td>
+              <td class="num" style="text-align:right;">S/ {{ "%.2f"|format(t[2]) }}</td>
+              <td class="num" style="text-align:right;">{{ t[4] }}</td>
+              <td class="num" style="text-align:right;font-weight:800;color:var(--pn-mint);">S/ {{ "%.2f"|format(t[5]) }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+{# Fila 5: Tendencia Diaria y Desempeño de Colaboradores #}
+<div class="pn-grid-2">
+  <section class="pn-card">
+    <div class="pn-card-header">
+      <h2 class="pn-card-title">📈 Evolución Diaria de Ventas</h2>
+    </div>
+    <div class="pn-table-wrap">
+      <table class="pn-table">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th style="text-align:right;">Comprobantes</th>
+            <th style="text-align:right;">Recaudación</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in datos.tendencia_diaria %}
+            <tr>
+              <td class="mono" style="font-weight:700;">{{ d[0] }}</td>
+              <td class="num" style="text-align:right;">{{ d[1] }}</td>
+              <td class="num" style="text-align:right;font-weight:800;color:var(--pn-glacier);">S/ {{ "%.2f"|format(d[2]) }}</td>
+            </tr>
+          {% else %}
+            <tr><td colspan="3" style="text-align:center;color:var(--pn-muted);">Sin movimientos en el rango elegido.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="pn-card">
+    <div class="pn-card-header">
+      <h2 class="pn-card-title">🏆 Desempeño por Colaborador en Caja</h2>
+      <a href="/personal" class="btn btn-outline btn-sm">Ver Equipo</a>
+    </div>
+    <div class="pn-table-wrap">
+      <table class="pn-table">
+        <thead>
+          <tr>
+            <th>Colaborador</th>
+            <th>Sede</th>
+            <th style="text-align:right;">Tickets</th>
+            <th style="text-align:right;">Recaudado</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for emp in datos.desempeno_empleados[:8] %}
+            <tr>
+              <td style="font-weight:700;">{{ emp[1] }}</td>
+              <td><span class="badge badge-slate">{{ emp[2] }}</span></td>
+              <td class="num" style="text-align:right;">{{ emp[3] }}</td>
+              <td class="num" style="text-align:right;font-weight:800;">S/ {{ "%.2f"|format(emp[4]) }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

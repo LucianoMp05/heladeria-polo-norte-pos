@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;">
+  <div class="pn-tabs">
+    <a href="/catalogo?tab=productos" class="pn-tab {{ 'active' if tab == 'productos' else '' }}">🍨 Productos ({{ productos|length }})</a>
+    <a href="/catalogo?tab=toppings" class="pn-tab {{ 'active' if tab == 'toppings' else '' }}">🍫 Toppings y Vínculos</a>
+    <a href="/catalogo?tab=recetas" class="pn-tab {{ 'active' if tab == 'recetas' else '' }}">📋 Recetas / Escandallos</a>
+  </div>
+
+  {% if tab in ('productos', 'toppings') %}
+    <form method="get" action="/catalogo" style="display:flex;gap:8px;">
+      <input type="hidden" name="tab" value="{{ tab }}" />
+      <input type="text" name="q" value="{{ q }}" placeholder="Buscar en catálogo..." class="pn-input" style="width:220px;" />
+      <button type="submit" class="btn btn-outline btn-sm">Buscar</button>
+    </form>
+  {% endif %}
+</div>
+
+{% if tab == 'productos' %}
+  <div class="pn-split-main">
+    <section class="pn-card">
+      <div class="pn-card-header">
+        <h2 class="pn-card-title">Carta Oficial de Productos</h2>
+        <span class="badge badge-mint">Precios sincronizados en las 3 cajas</span>
+      </div>
+      <div class="pn-table-wrap">
+        <table class="pn-table">
+          <thead>
+            <tr>
+              <th>Cód.</th>
+              <th>Producto y Descripción</th>
+              <th style="text-align:right;">Precio Oficial</th>
+              <th style="text-align:right;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in productos %}
+              <tr>
+                <td class="mono">#{{ p[0] }}</td>
+                <td>
+                  <div style="font-weight:700;color:var(--pn-navy);">{{ p[1] }}</div>
+                  <div style="font-size:12px;color:var(--pn-muted);">{{ p[2] }}</div>
+                </td>
+                <td class="num" style="text-align:right;font-weight:800;color:var(--pn-glacier);">S/ {{ "%.2f"|format(p[3]) }}</td>
+                <td style="text-align:right;white-space:nowrap;">
+                  <details style="display:inline-block;text-align:left;">
+                    <summary class="btn btn-outline btn-sm" style="list-style:none;">Editar</summary>
+                    <form method="post" action="/catalogo/productos/{{ p[0] }}/editar" class="pn-card" style="position:relative;margin-top:8px;padding:12px;display:flex;flex-direction:column;gap:8px;min-width:240px;">
+                      <input name="nom_producto" value="{{ p[1] }}" class="pn-input" required maxlength="45" />
+                      <input name="descripcion" value="{{ p[2] }}" class="pn-input" maxlength="100" />
+                      <input name="precio_venta" type="number" step="0.10" min="0.50" value="{{ '%.2f'|format(p[3]) }}" class="pn-input num" required />
+                      <button type="submit" class="btn btn-primary btn-sm">Guardar Cambios</button>
+                    </form>
+                  </details>
+                  {% if es_admin %}
+                    <form method="post" action="/catalogo/productos/{{ p[0] }}/eliminar" style="display:inline;" data-confirm="¿Retirar {{ p[1] }} del catálogo?">
+                      <button type="submit" class="btn btn-danger btn-sm">Retirar</button>
+                    </form>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="pn-card">
+      <div class="pn-card-header">
+        <h2 class="pn-card-title">Agregar Nuevo Producto</h2>
+      </div>
+      <form method="post" action="/catalogo/productos/crear" style="display:flex;flex-direction:column;gap:12px;">
+        <div class="pn-field">
+          <label>Nombre del Producto</label>
+          <input name="nom_producto" type="text" class="pn-input" required maxlength="45" placeholder="Ej. Sundae de Fresa" />
+        </div>
+        <div class="pn-field">
+          <label>Descripción Comercial</label>
+          <input name="descripcion" type="text" class="pn-input" maxlength="100" placeholder="Ej. 2 bolas con jalea artesanal y crema" />
+        </div>
+        <div class="pn-field">
+          <label>Precio Oficial de Venta (S/)</label>
+          <input name="precio_venta" type="number" step="0.10" min="0.50" class="pn-input num" required placeholder="12.00" />
+        </div>
+        <button type="submit" class="btn btn-primary">Incorporar al Catálogo</button>
+      </form>
+    </section>
+  </div>
+
+{% elif tab == 'toppings' %}
+  <div class="pn-split-main">
+    <section class="pn-card">
+      <div class="pn-card-header">
+        <h2 class="pn-card-title">Toppings y Adicionales</h2>
+      </div>
+      <div class="pn-table-wrap">
+        <table class="pn-table">
+          <thead>
+            <tr>
+              <th>Cód.</th>
+              <th>Nombre del Topping</th>
+              <th style="text-align:right;">Adicional</th>
+              <th style="text-align:right;">Productos</th>
+              <th style="text-align:right;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for t in toppings %}
+              <tr>
+                <td class="mono">#{{ t[0] }}</td>
+                <td style="font-weight:700;">{{ t[1] }}</td>
+                <td class="num" style="text-align:right;font-weight:800;color:var(--pn-mint);">+S/ {{ "%.2f"|format(t[2]) }}</td>
+                <td class="num" style="text-align:right;">{{ t[3] }}</td>
+                <td style="text-align:right;white-space:nowrap;">
+                  <details style="display:inline-block;text-align:left;">
+                    <summary class="btn btn-outline btn-sm" style="list-style:none;">Editar</summary>
+                    <form method="post" action="/catalogo/toppings/{{ t[0] }}/editar" class="pn-card" style="margin-top:8px;padding:10px;display:flex;flex-direction:column;gap:8px;min-width:210px;">
+                      <input name="nom_topping" value="{{ t[1] }}" class="pn-input" required maxlength="50" />
+                      <input name="precio_agregado" type="number" step="0.10" min="0" value="{{ '%.2f'|format(t[2]) }}" class="pn-input num" required />
+                      <button type="submit" class="btn btn-primary btn-sm">Actualizar</button>
+                    </form>
+                  </details>
+                  {% if es_admin %}
+                    <form method="post" action="/catalogo/toppings/{{ t[0] }}/eliminar" style="display:inline;" data-confirm="¿Retirar topping {{ t[1] }}?">
+                      <button type="submit" class="btn btn-danger btn-sm">Retirar</button>
+                    </form>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="pn-card">
+      <div class="pn-card-header">
+        <h2 class="pn-card-title">Nuevo Topping</h2>
+      </div>
+      <form method="post" action="/catalogo/toppings/crear" style="display:flex;flex-direction:column;gap:12px;">
+        <div class="pn-field">
+          <label>Nombre del Topping</label>
+          <input name="nom_topping" type="text" class="pn-input" required maxlength="50" placeholder="Ej. Salsa de Maracuyá" />
+        </div>
+        <div class="pn-field">
+          <label>Precio Adicional (S/)</label>
+          <input name="precio_agregado" type="number" step="0.10" min="0" value="1.00" class="pn-input num" required />
+        </div>
+        <button type="submit" class="btn btn-primary">Registrar Topping</button>
+      </form>
+    </section>
+  </div>
+
+  {# Matriz Producto <-> Topping #}
+  <section class="pn-card">
+    <div class="pn-card-header">
+      <h2 class="pn-card-title">Asignación de Toppings Permitidos por Producto</h2>
+      <span class="badge badge-sky">Haz clic para activar o desactivar en Punto de Venta</span>
+    </div>
+    <div class="pn-table-wrap">
+      <table class="pn-table">
+        <thead>
+          <tr>
+            <th>Producto</th>
+            {% for t in toppings %}
+              <th style="text-align:center;">{{ t[1] }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for prod in productos %}
+            <tr>
+              <td style="font-weight:700;">{{ prod[1] }}</td>
+              {% for t in toppings %}
+                {% set asignado = namespace(val=0) %}
+                {% for m in matriz_pt %}
+                  {% if m[0] == prod[0] and m[2] == t[0] %}{% set asignado.val = m[4] %}{% endif %}
+                {% endfor %}
+                <td style="text-align:center;">
+                  <form method="post" action="/catalogo/toppings/asignar">
+                    <input type="hidden" name="id_producto" value="{{ prod[0] }}" />
+                    <input type="hidden" name="id_topping" value="{{ t[0] }}" />
+                    <input type="hidden" name="accion" value="{{ 'QUITAR' if asignado.val == 1 else 'AGREGAR' }}" />
+                    <button type="submit" class="btn btn-sm {{ 'btn-success' if asignado.val == 1 else 'btn-outline' }}">
+                      {{ '✓ Sí' if asignado.val == 1 else '+ No' }}
+                    </button>
+                  </form>
+                </td>
+              {% endfor %}
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+{% elif tab == 'recetas' %}
+  <div class="pn-split-aside">
+    <section class="pn-card">
+      <div class="pn-card-header">
+        <h2 class="pn-card-title">Fichas de Recetas por Producto</h2>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        {% for r in recetas %}
+          <a href="/catalogo?tab=recetas&id_producto_receta={{ r[0] }}" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px;border-radius:12px;border:2px solid {{ 'var(--pn-glacier)' if r[0] == id_producto_receta else 'var(--pn-border)' }};background:{{ '#F0F9FF' if r[0] == id_producto_receta else 'var(--pn-surface-alt)' }};">
+            <div>
+              <div style="font-weight:700;color:var(--pn-navy);">{{ r[1] }}</div>
+              <div style="font-size:12px;color:var(--pn-muted);">{{ r[4] }} ingrediente(s) · S/ {{ "%.2f"|format(r[2]) }}</div>
+            </div>
+            {% if r[5] > 0 %}
+              <span class="badge badge-berry">⚠️ {{ r[5] }} vencido(s)</span>
+            {% elif r[4] == 0 %}
+              <span class="badge badge-amber">Sin receta</span>
+            {% else %}
+              <span class="badge badge-mint">Vigente</span>
+            {% endif %}
+          </a>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="pn-card" style="display:flex;flex-direction:column;gap:16px;">
+      <div class="pn-card-header" style="margin-bottom:0;">
+        <h2 class="pn-card-title">Ingredientes de la Receta Seleccionada</h2>
+      </div>
+
+      <div class="pn-table-wrap">
+        <table class="pn-table">
+          <thead>
+            <tr>
+              <th>Insumo</th>
+              <th style="text-align:right;">Cantidad</th>
+              <th style="text-align:right;">Margen Merma</th>
+              <th>Estado Sanitario</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for d in detalle_receta %}
+              <tr>
+                <td style="font-weight:700;">{{ d[4] }} <span style="color:var(--pn-muted);font-weight:400;">({{ d[5] }})</span></td>
+                <td class="num" style="text-align:right;">{{ d[6] }}</td>
+                <td class="num" style="text-align:right;">{{ d[7] }}%</td>
+                <td>
+                  <span class="badge {{ 'badge-berry' if 'VENCIDO' in d[8] else ('badge-amber' if 'POR VENCER' in d[8] else ('badge-mint' if 'VIGENTE' in d[8] else 'badge-slate')) }}">
+                    {{ d[8] }}
+                  </span>
+                </td>
+                <td style="text-align:right;">
+                  <form method="post" action="/catalogo/recetas/eliminar">
+                    <input type="hidden" name="id_producto" value="{{ id_producto_receta }}" />
+                    <input type="hidden" name="id_insumo" value="{{ d[3] }}" />
+                    <button type="submit" class="btn btn-outline btn-sm" style="color:var(--pn-berry);">Quitar</button>
+                  </form>
+                </td>
+              </tr>
+            {% else %}
+              <tr><td colspan="5" style="text-align:center;color:var(--pn-muted);padding:16px;">Este producto aún no tiene ingredientes registrados en su ficha técnica.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <form method="post" action="/catalogo/recetas/guardar" class="pn-receta-form-grid">
+        <input type="hidden" name="id_producto" value="{{ id_producto_receta }}" />
+        <div class="pn-field">
+          <label>Agregar / Actualizar Insumo</label>
+          <select name="id_insumo" class="pn-select" required>
+            {% for ins in insumos_all %}
+              <option value="{{ ins[0] }}">{{ ins[1] }} ({{ ins[3] }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="pn-field">
+          <label>Cantidad</label>
+          <input name="cantidad_requerida" type="number" step="0.01" min="0.01" class="pn-input num" required placeholder="50.00" />
+        </div>
+        <div class="pn-field">
+          <label>Merma (%)</label>
+          <input name="marg_error" type="number" step="0.1" min="0" value="5.0" class="pn-input num" />
+        </div>
+        <button type="submit" class="btn btn-primary">Guardar</button>
+      </form>
+    </section>
+  </div>
+{% endif %}
+{% endblock %}

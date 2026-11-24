@@ -1,0 +1,13 @@
+<div class="pos-topping-chips">
+  {% for top in toppings %}
+    {% set tid = top[0] %}
+    {% set tlabel = top[1].split(' - ', 1)[1] if ' - ' in top[1] else top[1] %}
+    <button
+      type="button"
+      class="pos-chip {{ 'selected' if tid == 0 else '' }}"
+      data-topping-id="{{ tid }}"
+    >
+      {{ tlabel }}
+    </button>
+  {% endfor %}
+</div>

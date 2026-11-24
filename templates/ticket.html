@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Comprobante {{ cabecera[1] }} — Heladería Polo Norte</title>
+  <link rel="stylesheet" href="/static/css/polo_norte.css" />
+</head>
+<body class="ticket-body">
+  <div class="no-print" style="max-width:340px;margin:0 auto 12px;display:flex;justify-content:space-between;gap:8px;">
+    <a href="/pos" class="btn btn-outline btn-sm">← Volver a Caja</a>
+    <button type="button" onclick="window.print()" class="btn btn-primary btn-sm">🖨️ Imprimir Ticket (80 mm)</button>
+  </div>
+
+  <article class="ticket-paper">
+    <div style="text-align:center;border-bottom:1px dashed #64748B;padding-bottom:10px;margin-bottom:10px;">
+      <img src="/static/img/polo_norte_logo.jpg" alt="Polo Norte" style="width:48px;height:48px;border-radius:10px;margin-bottom:4px;" />
+      <div style="font-size:15px;font-weight:800;">HELADERÍA POLO NORTE</div>
+      <div style="font-size:11px;">{{ cabecera[6] }}</div>
+      <div style="font-size:10px;color:#475569;">{{ cabecera[7] }}</div>
+      <div style="font-size:10px;color:#475569;">Tel.: {{ cabecera[8] }}</div>
+    </div>
+
+    <div style="border-bottom:1px dashed #64748B;padding-bottom:8px;margin-bottom:8px;line-height:1.6;">
+      <div><strong>{{ cabecera[2]|upper }}:</strong> {{ cabecera[1] }}</div>
+      <div><strong>Fecha:</strong> {{ cabecera[4] }}</div>
+      <div><strong>Modalidad:</strong> {{ cabecera[3] }}</div>
+      <div><strong>Atendido por:</strong> {{ cabecera[9] }}</div>
+      <div><strong>Cliente:</strong> {{ cabecera[10] }}</div>
+      <div><strong>Medio de Pago:</strong> {{ cabecera[12] }}</div>
+    </div>
+
+    <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:10px;">
+      <thead>
+        <tr style="border-bottom:1px solid #0F172A;">
+          <th style="text-align:left;padding-bottom:4px;">Cant. / Producto</th>
+          <th style="text-align:right;padding-bottom:4px;">Importe</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for lin in lineas %}
+          <tr>
+            <td style="padding:5px 0;">
+              <div><strong>{{ lin[3] }}×</strong> {{ lin[2] }}</div>
+              {% if lin[5] != 'Sin Topping' %}
+                <div style="font-size:10px;color:#475569;">+ {{ lin[5] }} (S/ {{ "%.2f"|format(lin[6]) }})</div>
+              {% endif %}
+            </td>
+            <td style="text-align:right;vertical-align:top;padding:5px 0;font-weight:700;">S/ {{ "%.2f"|format(lin[7]) }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div style="border-top:1px dashed #64748B;padding-top:10px;display:flex;justify-content:space-between;font-size:15px;font-weight:800;">
+      <span>TOTAL PAGADO</span>
+      <span>S/ {{ "%.2f"|format(cabecera[13]) }}</span>
+    </div>
+
+    <div style="text-align:center;margin-top:14px;font-size:10px;color:#475569;">
+      ¡Gracias por tu preferencia!<br />
+      Heladería Polo Norte · Trujillo, Perú
+    </div>
+  </article>
+</body>
+</html>

@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="pn-card" style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;">
+  <div class="pn-tabs">
+    <a href="/pos/arqueo?id_sucursal={{ filtro_sede }}&periodo=hoy" class="pn-tab {{ 'active' if periodo == 'hoy' else '' }}">Hoy</a>
+    <a href="/pos/arqueo?id_sucursal={{ filtro_sede }}&periodo=7d" class="pn-tab {{ 'active' if periodo == '7d' else '' }}">Últimos 7 días</a>
+    <a href="/pos/arqueo?id_sucursal={{ filtro_sede }}&periodo=historico" class="pn-tab {{ 'active' if periodo == 'historico' else '' }}">Histórico Completo</a>
+  </div>
+
+  <form method="get" action="/pos/arqueo" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+    <input type="hidden" name="periodo" value="rango" />
+    {% if es_admin %}
+      <select name="id_sucursal" class="pn-select" style="width:185px;">
+        <option value="0" {{ 'selected' if filtro_sede == 0 else '' }}>Todas las Sedes</option>
+        {% for s in sedes %}
+          <option value="{{ s[0] }}" {{ 'selected' if filtro_sede == s[0] else '' }}>{{ s[1] }}</option>
+        {% endfor %}
+      </select>
+    {% endif %}
+    <input type="date" name="fecha_desde" value="{{ fecha_desde }}" class="pn-input" style="width:145px;" />
+    <input type="date" name="fecha_hasta" value="{{ fecha_hasta }}" class="pn-input" style="width:145px;" />
+    <button type="submit" class="btn btn-primary btn-sm">Consultar</button>
+  </form>
+</div>
+
+{# Tarjetas Resumen del Arqueo #}
+<div class="pn-grid-4">
+  <div class="pn-kpi-card kpi-mint">
+    <div class="pn-kpi-label">Total Recaudado ({{ resumen.nombre_sucursal }})</div>
+    <div class="pn-kpi-value num">S/ {{ "%.2f"|format(resumen.total_recaudado) }}</div>
+    <div class="pn-kpi-foot">Consolidado oficial de caja</div>
+  </div>
+  <div class="pn-kpi-card">
+    <div class="pn-kpi-label">Comprobantes Emitidos</div>
+    <div class="pn-kpi-value num">{{ resumen.total_ventas }}</div>
+    <div class="pn-kpi-foot">Tickets registrados en el periodo</div>
+  </div>
+  <div class="pn-kpi-card">
+    <div class="pn-kpi-label">Ticket Promedio</div>
+    <div class="pn-kpi-value num">S/ {{ "%.2f"|format(resumen.ticket_promedio) }}</div>
+    <div class="pn-kpi-foot">Promedio por venta</div>
+  </div>
+  <div class="pn-kpi-card">
+    <div class="pn-kpi-label">Modalidad de Atención</div>
+    <div class="pn-kpi-value num" style="font-size:20px;">{{ resumen.ventas_sede }} Sede · {{ resumen.ventas_delivery }} Deliv.</div>
+    <div class="pn-kpi-foot">Distribución por canal</div>
+  </div>
+</div>
+
+{# Desglose por Medio de Pago (siempre los 4 medios visibles) #}
+<section class="pn-card">
+  <div class="pn-card-header">
+    <h2 class="pn-card-title">Desglose por Medio de Pago — {{ resumen.nombre_sucursal }}</h2>
+    <span class="badge badge-sky">Todos los medios visibles</span>
+  </div>
+  <div class="pn-table-wrap">
+    <table class="pn-table">
+      <thead>
+        <tr>
+          <th>Medio de Pago</th>
+          <th>Ventas</th>
+          <th>Monto Recaudado</th>
+          <th style="width:36%;">Participación</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in desglose %}
+          <tr>
+            <td style="font-weight:700;">{{ row[1] }}</td>
+            <td class="num">{{ row[2] }}</td>
+            <td class="num" style="font-weight:800;color:var(--pn-navy);">S/ {{ "%.2f"|format(row[3]) }}</td>
+            <td>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div class="pn-bar-track"><div class="pn-bar-fill" style="width:{{ row[4] }}%;"></div></div>
+                <span class="num" style="min-width:44px;text-align:right;font-weight:700;">{{ "%.1f"|format(row[4]) }}%</span>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+{% if es_admin and ventas_sede %}
+<section class="pn-card">
+  <div class="pn-card-header">
+    <h2 class="pn-card-title">Comparativa Consolidada por Sucursal</h2>
+  </div>
+  <div class="pn-grid-3">
+    {% for s in ventas_sede %}
+      <div style="padding:14px;border-radius:12px;background:var(--pn-surface-alt);border:1px solid var(--pn-border);">
+        <div style="font-weight:800;color:var(--pn-navy);font-size:14px;">📍 {{ s[1] }}</div>
+        <div class="num" style="font-size:22px;font-weight:800;color:var(--pn-glacier);margin:6px 0;">S/ {{ "%.2f"|format(s[3]) }}</div>
+        <div style="font-size:12px;color:var(--pn-muted);">{{ s[2] }} comprobantes · Ticket prom. S/ {{ "%.2f"|format(s[4]) }} ({{ "%.1f"|format(s[5]) }}%)</div>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ titulo }} — Heladería Polo Norte</title>
+  <link rel="stylesheet" href="/static/css/polo_norte.css" />
+</head>
+<body>
+  <div class="pn-shell">
+    {# Barra Lateral Polar Navy #}
+    <aside class="pn-sidebar no-print">
+      <div class="pn-brand">
+        <img src="/static/img/polo_norte_logo.jpg" alt="Heladería Polo Norte" />
+        <div>
+          <div class="pn-brand-title">POLO NORTE</div>
+          <div class="pn-brand-sub">Heladería · Trujillo</div>
+        </div>
+      </div>
+
+      <div class="pn-sede-chip">
+        <div class="pn-sede-chip-label">Ubicación Activa</div>
+        <div class="pn-sede-chip-value">📍 {{ sesion.nombre_sucursal }}</div>
+      </div>
+
+      <nav class="pn-nav" aria-label="Navegación principal">
+        {% if sesion.rol == 'Administrador' %}
+          <div class="pn-nav-group">Dirección</div>
+          <a href="/dashboard" class="pn-nav-link {{ 'active' if pagina == 'dashboard' else '' }}">📊 Panel de Gerencia</a>
+        {% endif %}
+
+        {% if sesion.rol in ('Administrador', 'Multifuncional') %}
+          <div class="pn-nav-group">Atención en Caja</div>
+          <a href="/pos" class="pn-nav-link {{ 'active' if pagina == 'pos' else '' }}">🍦 Punto de Venta</a>
+          <a href="/pos/arqueo" class="pn-nav-link {{ 'active' if pagina == 'arqueo' else '' }}">💰 Arqueo de Caja</a>
+          <a href="/clientes" class="pn-nav-link {{ 'active' if pagina == 'clientes' else '' }}">👥 Clientes</a>
+        {% endif %}
+
+        {% if sesion.rol in ('Administrador', 'AsistenteLogistico') %}
+          <div class="pn-nav-group">Operaciones y Stock</div>
+          <a href="/catalogo" class="pn-nav-link {{ 'active' if pagina == 'catalogo' else '' }}">🍨 Catálogo y Recetas</a>
+          <a href="/almacen" class="pn-nav-link {{ 'active' if pagina == 'almacen' else '' }}">📦 Almacén y Compras</a>
+        {% endif %}
+
+        {% if sesion.rol in ('Administrador', 'RecursosHumanos') %}
+          <div class="pn-nav-group">Equipo</div>
+          <a href="/personal" class="pn-nav-link {{ 'active' if pagina == 'personal' else '' }}">🧑‍💼 Personal y Sedes</a>
+        {% endif %}
+
+        {% if sesion.rol == 'Administrador' %}
+          <div class="pn-nav-group">Control</div>
+          <a href="/historial" class="pn-nav-link {{ 'active' if pagina == 'historial' else '' }}">🛡️ Historial de Operaciones</a>
+        {% endif %}
+      </nav>
+
+      <div class="pn-sidebar-footer">
+        <div class="pn-user-box">
+          <div class="pn-user-name">👤 {{ sesion.persona }}</div>
+          <div class="pn-user-role">{{ rol_etiqueta }}</div>
+        </div>
+        <form method="post" action="/logout">
+          <button type="submit" class="btn btn-danger btn-block btn-sm">Cerrar Turno / Salir</button>
+        </form>
+      </div>
+    </aside>
+
+    {# Área Principal #}
+    <div class="pn-main">
+      <header class="pn-topbar no-print">
+        <div>
+          <h1 class="pn-page-title">{{ titulo }}</h1>
+          {% if subtitulo %}
+            <div class="pn-page-sub">{{ subtitulo }}</div>
+          {% endif %}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          {% if sesion.rol in ('Administrador', 'Multifuncional') and pagina != 'pos' %}
+            <a href="/pos" class="btn btn-primary btn-sm">🍦 Ir a Caja Rápida</a>
+          {% endif %}
+          {% if es_admin and pagina != 'personal' %}
+            <a href="/personal#accesos" class="btn btn-amber btn-sm">🔐 Control de Accesos</a>
+          {% endif %}
+        </div>
+      </header>
+
+      <main class="pn-content">
+        {% if flash %}
+          <div class="pn-flash pn-flash-{{ flash.tipo }}">
+            <span>{{ flash.texto }}</span>
+            {% if flash.ticket_id %}
+              <a href="/pos/ventas/{{ flash.ticket_id }}/ticket" target="_blank" class="btn btn-navy btn-sm">🧾 Ver / Imprimir Comprobante</a>
+            {% endif %}
+          </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+
+  <script src="/static/js/polo_norte.js"></script>
+</body>
+</html>

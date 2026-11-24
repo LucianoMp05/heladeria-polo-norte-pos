@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="pn-split-main">
+  <section class="pn-card">
+    <div class="pn-card-header">
+      <h2 class="pn-card-title">Nómina de Colaboradores ({{ empleados|length }})</h2>
+      <form method="get" action="/personal" style="display:flex;gap:8px;">
+        <input name="q" value="{{ q }}" placeholder="Buscar colaborador..." class="pn-input" style="width:200px;" />
+        <button type="submit" class="btn btn-outline btn-sm">Buscar</button>
+      </form>
+    </div>
+
+    <div class="pn-table-wrap">
+      <table class="pn-table">
+        <thead>
+          <tr>
+            <th>Colaborador</th>
+            <th>Sucursal</th>
+            <th>Cargo</th>
+            <th>Acceso</th>
+            <th style="text-align:right;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in empleados %}
+            <tr>
+              <td style="font-weight:700;color:var(--pn-navy);">{{ e[1] }} {{ e[2] }} {{ e[3] or '' }}</td>
+              <td>{{ e[4].split(' - ', 1)[1] if ' - ' in e[4] else e[4] }}</td>
+              <td>
+                {% set cargo = e[5] %}
+                {% if 'Recursos' in cargo %}
+                  <span class="badge badge-amber">Recursos Humanos</span>
+                {% elif 'Logística' in cargo or 'AsistenteLogistico' in cargo %}
+                  <span class="badge badge-sky">Logística y Almacén</span>
+                {% else %}
+                  <span class="badge badge-slate">Multifuncional (Caja)</span>
+                {% endif %}
+              </td>
+              <td class="mono" style="font-size:12px;">{{ e[6] }}</td>
+              <td style="text-align:right;white-space:nowrap;">
+                <details style="display:inline-block;text-align:left;">
+                  <summary class="btn btn-outline btn-sm" style="list-style:none;">Editar</summary>
+                  <form method="post" action="/personal/{{ e[0] }}/editar" class="pn-card" style="margin-top:8px;padding:10px;display:flex;flex-direction:column;gap:8px;min-width:220px;">
+                    <input name="nombres" value="{{ e[1] }}" class="pn-input" required maxlength="45" />
+                    <input name="ap_paterno" value="{{ e[2] }}" class="pn-input" required maxlength="45" />
+                    <input name="ap_materno" value="{{ e[3] or '' }}" class="pn-input" maxlength="45" />
+                    <select name="id_sucursal" class="pn-select">
+                      {% for s in sedes %}
+                        <option value="{{ s[0] }}" {{ 'selected' if (s[0]|string ~ ' - ') in e[4] else '' }}>{{ s[1] }}</option>
+                      {% endfor %}
+                    </select>
+                    <select name="id_rol" class="pn-select">
+                      {% for r in roles %}
+                        <option value="{{ r[0] }}" {{ 'selected' if (r[0]|string ~ ' - ') in e[5] else '' }}>{{ r[1] }}</option>
+                      {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
+                  </form>
+                </details>
+                {% if es_admin %}
+                  <form method="post" action="/personal/{{ e[0] }}/eliminar" style="display:inline;" data-confirm="¿Dar de baja a {{ e[1] }} {{ e[2] }}?">
+                    <button type="submit" class="btn btn-danger btn-sm">Baja</button>
+                  </form>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="pn-card">
+    <div class="pn-card-header">
+      <h2 class="pn-card-title">Registrar Nuevo Colaborador</h2>
+    </div>
+    <form method="post" action="/personal/crear" style="display:flex;flex-direction:column;gap:12px;">
+      <div class="pn-field"><label>Nombres</label><input name="nombres" class="pn-input" required maxlength="45" /></div>
+      <div class="pn-field"><label>Apellido Paterno</label><input name="ap_paterno" class="pn-input" required maxlength="45" /></div>
+      <div class="pn-field"><label>Apellido Materno</label><input name="ap_materno" class="pn-input" maxlength="45" /></div>
+      <div class="pn-field">
+        <label>Sucursal Asignada</label>
+        <select name="id_sucursal" class="pn-select" required>
+          {% for s in sedes %}
+            <option value="{{ s[0] }}">{{ s[1] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="pn-field">
+        <label>Cargo en la Empresa</label>
+        <select name="id_rol" class="pn-select" required>
+          {% for r in roles %}
+            <option value="{{ r[0] }}">{{ r[1] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary">Registrar Colaborador</button>
+    </form>
+  </section>
+</div>
+
+{# Desempeño de Personal Multifuncional #}
+<section class="pn-card">
+  <div class="pn-card-header">
+    <h2 class="pn-card-title">🏆 Productividad del Equipo en Atención de Caja</h2>
+  </div>
+  <div class="pn-table-wrap">
+    <table class="pn-table">
+      <thead>
+        <tr>
+          <th>Colaborador</th>
+          <th>Sucursal</th>
+          <th style="text-align:right;">Comprobantes</th>
+          <th style="text-align:right;">Recaudación Total</th>
+          <th style="text-align:right;">Ticket Promedio</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in desempeno %}
+          <tr>
+            <td style="font-weight:700;">{{ d[1] }}</td>
+            <td>{{ d[2] }}</td>
+            <td class="num" style="text-align:right;">{{ d[3] }}</td>
+            <td class="num" style="text-align:right;font-weight:800;color:var(--pn-navy);">S/ {{ "%.2f"|format(d[4]) }}</td>
+            <td class="num" style="text-align:right;">S/ {{ "%.2f"|format(d[5]) }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+{% if es_admin %}
+{# Exclusivo Gerencia: Gestión de Cuentas y Desbloqueo #}
+<div id="accesos" class="pn-split-main">
+  <section class="pn-card">
+    <div class="pn-card-header">
+      <h2 class="pn-card-title">🔐 Cuentas de Acceso (Cajas Diarias y Administración)</h2>
+      <span class="badge badge-amber">Exclusivo Gerencia</span>
+    </div>
+    <div class="pn-table-wrap">
+      <table class="pn-table">
+        <thead>
+          <tr>
+            <th>Usuario</th>
+            <th>Responsable</th>
+            <th>Modalidad</th>
+            <th>Intentos</th>
+            <th>Estado</th>
+            <th style="text-align:right;">Acción</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in credenciales %}
+            <tr>
+              <td class="mono" style="font-weight:700;">{{ c[1] }}</td>
+              <td>{{ c[6] }}<br /><span style="font-size:11px;color:var(--pn-muted);">{{ c[8] }}</span></td>
+              <td><span class="badge {{ 'badge-sky' if c[3] == 'Caja Directa' else 'badge-slate' }}">{{ c[3] }}</span></td>
+              <td class="num">{{ c[4] }} / 3</td>
+              <td>
+                <span class="badge {{ 'badge-berry' if c[5] == 'Bloqueado' else 'badge-mint' }}">{{ c[5] }}</span>
+              </td>
+              <td style="text-align:right;">
+                {% if c[5] == 'Bloqueado' or c[4] > 0 %}
+                  <form method="post" action="/personal/reactivar">
+                    <input type="hidden" name="usuario" value="{{ c[1] }}" />
+                    <input type="hidden" name="origen" value="/personal" />
+                    <button type="submit" class="btn btn-success btn-sm">Reactivar</button>
+                  </form>
+                {% else %}
+                  <span style="font-size:11px;color:var(--pn-muted);">Normal</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="pn-card">
+    <div class="pn-card-header">
+      <h2 class="pn-card-title">Asignar Cuenta Administrativa</h2>
+    </div>
+    <p style="font-size:12px;color:var(--pn-muted);margin:0 0 12px;">
+      Solo para cargos de Recursos Humanos o Logística. El personal Multifuncional opera directamente desde la Caja Diaria de su sede.
+    </p>
+    <form method="post" action="/personal/credencial" style="display:flex;flex-direction:column;gap:11px;">
+      <div class="pn-field">
+        <label>Colaborador</label>
+        <select name="id_empleado" class="pn-select" required>
+          {% for e in empleados %}
+            <option value="{{ e[0] }}">{{ e[1] }} {{ e[2] }} — {{ 'RRHH' if 'Recursos' in e[5] else ('Logística' if ('Logística' in e[5] or 'AsistenteLogistico' in e[5]) else 'Multifuncional') }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="pn-field"><label>Usuario</label><input name="usuario" class="pn-input" required minlength="3" maxlength="45" /></div>
+      <div class="pn-field"><label>Contraseña</label><input name="password" type="password" class="pn-input" required minlength="4" /></div>
+      <div class="pn-field"><label>Confirmar Contraseña</label><input name="confirmar_password" type="password" class="pn-input" required minlength="4" /></div>
+      <button type="submit" class="btn btn-navy">Asignar Acceso Protegido</button>
+    </form>
+  </section>
+</div>
+{% endif %}
+{% endblock %}

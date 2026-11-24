@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Iniciar Turno — Heladería Polo Norte</title>
+  <link rel="stylesheet" href="/static/css/polo_norte.css" />
+</head>
+<body class="login-page">
+  <div style="max-width:1060px;width:100%;display:flex;flex-direction:column;gap:16px;">
+    {# Cabecera de Marca #}
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;color:#fff;">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <img src="/static/img/polo_norte_logo.jpg" alt="Heladería Polo Norte" style="width:54px;height:54px;border-radius:14px;background:#fff;padding:3px;box-shadow:0 6px 18px rgba(0,0,0,0.3);" />
+        <div>
+          <div style="font-size:22px;font-weight:800;letter-spacing:0.02em;">HELADERÍA POLO NORTE</div>
+          <div style="font-size:13px;color:#7DD3FC;">Sistema de Punto de Venta y Gestión Comercial · Trujillo</div>
+        </div>
+      </div>
+      <span class="badge badge-sky">3 Sucursales Conectadas</span>
+    </div>
+
+    {% if flash %}
+      <div class="pn-flash pn-flash-{{ flash.tipo }}">
+        <span>{{ flash.texto }}</span>
+      </div>
+    {% endif %}
+
+    <div class="login-wrapper">
+      {# PANEL 1: CAJAS DIARIAS POR SEDE (SIN CONTRASEÑA) #}
+      <section class="login-card">
+        <span class="badge badge-sky">Apertura en 1 Clic · Personal de Atención</span>
+        <h1 style="margin:10px 0 6px;font-size:21px;color:var(--pn-navy);">Cajas Diarias por Sede</h1>
+        <p style="margin:0;color:var(--pn-muted);font-size:13px;">
+          Elige tu sucursal para abrir el Punto de Venta. El sistema filtra automáticamente a los cajeros del local, la serie de comprobante y el arqueo de tu sede.
+        </p>
+
+        <div class="sede-login-grid">
+          <form method="post" action="/login/caja/caja_quintanas">
+            <button type="submit" class="sede-login-btn">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:22px;">🏪</span>
+                <span class="badge badge-mint">Activa</span>
+              </div>
+              <div style="font-weight:800;font-size:14px;color:var(--pn-navy);">Sede Quintanas</div>
+              <div style="font-size:11px;color:var(--pn-muted);">Urb. Las Quintanas Mz R Lt 14</div>
+              <div style="font-size:12px;font-weight:700;color:var(--pn-glacier);margin-top:4px;">Abrir Caja (B001) →</div>
+            </button>
+          </form>
+
+          <form method="post" action="/login/caja/caja_upao">
+            <button type="submit" class="sede-login-btn">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:22px;">🎓</span>
+                <span class="badge badge-mint">Activa</span>
+              </div>
+              <div style="font-weight:800;font-size:14px;color:var(--pn-navy);">Sede UPAO</div>
+              <div style="font-size:11px;color:var(--pn-muted);">Av. América Sur 3145</div>
+              <div style="font-size:12px;font-weight:700;color:var(--pn-glacier);margin-top:4px;">Abrir Caja (B002) →</div>
+            </button>
+          </form>
+
+          <form method="post" action="/login/caja/caja_mall">
+            <button type="submit" class="sede-login-btn">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:22px;">🛍️</span>
+                <span class="badge badge-mint">Activa</span>
+              </div>
+              <div style="font-weight:800;font-size:14px;color:var(--pn-navy);">Sede Mall Plaza</div>
+              <div style="font-size:11px;color:var(--pn-muted);">Av. Mansiche C.C. Mall Plaza N1</div>
+              <div style="font-size:12px;font-weight:700;color:var(--pn-glacier);margin-top:4px;">Abrir Caja (B003) →</div>
+            </button>
+          </form>
+        </div>
+
+        <div style="background:var(--pn-surface-alt);border:1px solid var(--pn-border);border-radius:12px;padding:12px 14px;font-size:12px;color:var(--pn-muted);display:flex;justify-content:space-between;align-items:center;gap:10px;">
+          <span>🔒 Ingreso directo sin contraseña individual · Precios de venta bloqueados por seguridad.</span>
+          <strong style="color:var(--pn-navy);">Caja Rápida</strong>
+        </div>
+      </section>
+
+      {# PANEL 2: GESTIÓN ADMINISTRATIVA #}
+      <section class="login-card">
+        <span class="badge badge-amber">Acceso Protegido · Máximo 3 Intentos</span>
+        <h2 style="margin:10px 0 6px;font-size:20px;color:var(--pn-navy);">Gestión Administrativa</h2>
+        <p style="margin:0 0 16px;color:var(--pn-muted);font-size:13px;">
+          Exclusivo para Gerencia General, Recursos Humanos y Logística.
+        </p>
+
+        <form method="post" action="/login" style="display:flex;flex-direction:column;gap:14px;">
+          <div class="pn-field">
+            <label for="login-usuario-input">Usuario administrativo</label>
+            <input
+              id="login-usuario-input"
+              name="usuario"
+              type="text"
+              class="pn-input"
+              list="cuentas-backoffice"
+              placeholder="Ej. admin, rrhh_etel o log_joel"
+              autocomplete="username"
+              required
+            />
+            <datalist id="cuentas-backoffice">
+              <option value="admin">Gerencia General</option>
+              <option value="rrhh_etel">Recursos Humanos</option>
+              <option value="log_joel">Logística y Almacén</option>
+            </datalist>
+          </div>
+
+          <div class="pn-field">
+            <label for="login-pass-input">Contraseña</label>
+            <input
+              id="login-pass-input"
+              name="password"
+              type="password"
+              class="pn-input"
+              placeholder="Ingrese su clave confidencial"
+              autocomplete="current-password"
+              required
+            />
+          </div>
+
+          <div id="login-status-box" style="min-height:28px;">
+            <span class="badge badge-slate">Seleccione o escriba su usuario administrativo</span>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg btn-block">Ingresar al Panel Administrativo</button>
+        </form>
+
+        <p style="margin:14px 0 0;font-size:11px;color:var(--pn-muted);line-height:1.5;">
+          Por seguridad, las cuentas administrativas se bloquean automáticamente al tercer intento fallido hasta que Gerencia General las reactive.
+        </p>
+      </section>
+    </div>
+  </div>
+
+  <script src="/static/js/polo_norte.js"></script>
+</body>
+</html>

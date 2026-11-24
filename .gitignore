@@ -1,0 +1,29 @@
+# Entorno y secretos (NUNCA subir a GitHub)
+.env
+.env.*
+!.env.example
+*.pem
+*.crt
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.pytest_cache/
+
+# IDEs / Sistema Operativo
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Archivos temporales y respaldos locales pesados
+*.rar
+*.zip
+archivos_bd/backup_*.sql
+archivos_bd/heladeriaV2*.sql
+archivos_bd/csv_transformados/
+*.pdf
