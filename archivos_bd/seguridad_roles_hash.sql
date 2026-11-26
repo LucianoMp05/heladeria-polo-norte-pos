@@ -7,6 +7,9 @@
 -- • Portable para MySQL Server local y Azure Database for MySQL 8.4 LTS (sin DEFINER)
 -- =================================================================================
 
+SET NAMES utf8mb4 COLLATE utf8mb4_general_ci;
+SET collation_connection = 'utf8mb4_general_ci';
+
 -- ---------------------------------------------------------------------------------
 -- 1. COMPLETAR ROLES EN LA TABLA `rol` Y ASIGNAR EMPLEADOS (IDEMPOTENTE)
 -- ---------------------------------------------------------------------------------
